@@ -9,57 +9,59 @@ import (
 	"path"
 	"runtime/pprof"
 	"sort"
+	"strings"
 	"text/tabwriter"
 )
 
-const VERSION = `0.1.1`
+const version = `0.1.1`
 
-var languages = []Language{
-	Language{"Thrift", mExt(".thrift"), cComments},
+var languages = []language{
+	language{"Thrift", mExt(".thrift"), cComments},
 
-	Language{"C", mExt(".c", ".h"), cComments},
-	Language{"C++", mExt(".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx"), cComments},
-	Language{"Go", mExt(".go"), cComments},
-	Language{"Scala", mExt(".scala"), cComments},
-	Language{"Java", mExt(".java"), cComments},
+	language{"C", mExt(".c", ".h"), cComments},
+	language{"C++", mExt(".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx"), cComments},
+	language{"Go", mExt(".go"), cComments},
+	language{"Scala", mExt(".scala"), cComments},
+	language{"Java", mExt(".java"), cComments},
 
-	Language{"YACC", mExt(".y"), cComments},
-	Language{"Lex", mExt(".l"), cComments},
+	language{"YACC", mExt(".y"), cComments},
+	language{"Lex", mExt(".l"), cComments},
 
-	Language{"SQL", mExt(".sql"), sqlComments},
+	language{"SQL", mExt(".sql"), sqlComments},
 
-	Language{"Haskell", mExt(".hs", ".lhs"), hsComments},
+	language{"Haskell", mExt(".hs", ".lhs"), hsComments},
 
-	Language{"Perl", mExt(".pl", ".pm"), shComments},
-	Language{"PHP", mExt(".php"), cComments},
+	language{"Perl", mExt(".pl", ".pm"), shComments},
+	language{"PHP", mExt(".php"), cComments},
 
-	Language{"Shell", mExt(".sh"), shComments},
-	Language{"Bash", mExt(".bash"), shComments},
+	language{"Shell", mExt(".sh"), shComments},
+	language{"Bash", mExt(".bash"), shComments},
 
-	Language{"Ruby", mExt(".rb"), shComments},
-	Language{"Python", mExt(".py"), pyComments},
-	Language{"Assembly", mExt(".asm", ".s"), semiComments},
-	Language{"Lisp", mExt(".lsp", ".lisp"), semiComments},
-	Language{"Scheme", mExt(".scm", ".scheme"), semiComments},
+	language{"Ruby", mExt(".rb"), shComments},
+	language{"Python", mExt(".py"), pyComments},
+	language{"Assembly", mExt(".asm", ".s"), semiComments},
+	language{"Lisp", mExt(".lsp", ".lisp"), semiComments},
+	language{"Scheme", mExt(".scm", ".scheme"), semiComments},
 
-	Language{"Make", mName("makefile", "Makefile", "MAKEFILE"), shComments},
-	Language{"CMake", mName("CMakeLists.txt"), shComments},
-	Language{"Jam", mName("Jamfile", "Jamrules"), shComments},
+	language{"Make", mName("makefile", "Makefile", "MAKEFILE"), shComments},
+	language{"CMake", mName("CMakeLists.txt"), shComments},
+	language{"Jam", mName("Jamfile", "Jamrules"), shComments},
 
-	Language{"Markdown", mExt(".md"), noComments},
+	language{"Markdown", mExt(".md"), noComments},
 
-	Language{"HAML", mExt(".haml"), noComments},
-	Language{"SASS", mExt(".sass"), cssComments},
-	Language{"SCSS", mExt(".scss"), cssComments},
+	language{"HAML", mExt(".haml"), noComments},
+	language{"SASS", mExt(".sass"), cssComments},
+	language{"SCSS", mExt(".scss"), cssComments},
 
-	Language{"HTML", mExt(".htm", ".html", ".xhtml"), xmlComments},
-	Language{"XML", mExt(".xml"), xmlComments},
-	Language{"CSS", mExt(".css"), cssComments},
-	Language{"JavaScript", mExt(".js"), cComments},
-	Language{"JSON", mExt(".json"), noComments},
+	language{"HTML", mExt(".htm", ".html", ".xhtml"), xmlComments},
+	language{"XML", mExt(".xml"), xmlComments},
+	language{"CSS", mExt(".css"), cssComments},
+	language{"JavaScript", mExt(".js"), cComments},
+	language{"TypeScript", mExt(".ts", ".tsx"), cComments},
+	language{"JSON", mExt(".json"), noComments},
 }
 
-type Commenter struct {
+type commenter struct {
 	LineComment  string
 	StartComment string
 	EndComment   string
@@ -67,25 +69,25 @@ type Commenter struct {
 }
 
 var (
-	noComments = Commenter{"\000", "\000", "\000", false}
-	xmlComments = Commenter{"\000", `<!--`, `-->`, false}
-	cComments  = Commenter{`//`, `/*`, `*/`, false}
-	cssComments  = Commenter{"\000", `/*`, `*/`, false}
-	shComments = Commenter{`#`, "\000", "\000", false}
-	semiComments = Commenter{`;`, "\000", "\000", false}
-	hsComments  = Commenter{`--`, `{-`, `-}`, true}
-	sqlComments  = Commenter{`--`, "\000", "\000", false}
-	pyComments = Commenter{`#`, `"""`, `"""`, false}
+	noComments   = commenter{"\000", "\000", "\000", false}
+	xmlComments  = commenter{"\000", `<!--`, `-->`, false}
+	cComments    = commenter{`//`, `/*`, `*/`, false}
+	cssComments  = commenter{"\000", `/*`, `*/`, false}
+	shComments   = commenter{`#`, "\000", "\000", false}
+	semiComments = commenter{`;`, "\000", "\000", false}
+	hsComments   = commenter{`--`, `{-`, `-}`, true}
+	sqlComments  = commenter{`--`, "\000", "\000", false}
+	pyComments   = commenter{`#`, `"""`, `"""`, false}
 )
 
-type Language struct {
-	Namer
-	Matcher
-	Commenter
+type language struct {
+	namer
+	matcher
+	commenter
 }
 
 // TODO work properly with unicode
-func (l Language) Update(c []byte, s *Stats) {
+func (l language) Update(c []byte, s *stats) {
 	s.FileCount++
 
 	inComment := 0 // this is an int for nesting
@@ -103,7 +105,9 @@ func (l Language) Update(c []byte, s *Stats) {
 				inLComment = true
 				lp = 0
 			}
-		} else { lp = 0 }
+		} else {
+			lp = 0
+		}
 		if !inLComment && b == sc[sp] {
 			sp++
 			if sp == len(sc) {
@@ -113,14 +117,20 @@ func (l Language) Update(c []byte, s *Stats) {
 				}
 				sp = 0
 			}
-		} else { sp = 0 }
+		} else {
+			sp = 0
+		}
 		if !inLComment && inComment > 0 && b == ec[ep] {
 			ep++
 			if ep == len(ec) {
-				if inComment > 0 { inComment-- }
+				if inComment > 0 {
+					inComment--
+				}
 				ep = 0
 			}
-		} else { ep = 0 }
+		} else {
+			ep = 0
+		}
 
 		if b != byte(' ') && b != byte('\t') && b != byte('\n') && b != byte('\r') {
 			blank = false
@@ -136,22 +146,24 @@ func (l Language) Update(c []byte, s *Stats) {
 				s.CommentLines++
 			} else if blank {
 				s.BlankLines++
-			} else { s.CodeLines++ }
+			} else {
+				s.CodeLines++
+			}
 			blank = true
 			continue
 		}
 	}
 }
 
-type Namer string
+type namer string
 
-func (l Namer) Name() string { return string(l) }
+func (l namer) Name() string { return string(l) }
 
-type Matcher func(string) bool
+type matcher func(string) bool
 
-func (m Matcher) Match(fname string) bool { return m(fname) }
+func (m matcher) Match(fname string) bool { return m(fname) }
 
-func mExt(exts ...string) Matcher {
+func mExt(exts ...string) matcher {
 	return func(fname string) bool {
 		for _, ext := range exts {
 			if ext == path.Ext(fname) {
@@ -162,7 +174,7 @@ func mExt(exts ...string) Matcher {
 	}
 }
 
-func mName(names ...string) Matcher {
+func mName(names ...string) matcher {
 	return func(fname string) bool {
 		for _, name := range names {
 			if name == path.Base(fname) {
@@ -173,7 +185,7 @@ func mName(names ...string) Matcher {
 	}
 }
 
-type Stats struct {
+type stats struct {
 	FileCount    int
 	TotalLines   int
 	CodeLines    int
@@ -181,10 +193,10 @@ type Stats struct {
 	CommentLines int
 }
 
-var info = map[string]*Stats{}
+var info = map[string]*stats{}
 
 func handleFile(fname string) {
-	var l Language
+	var l language
 	ok := false
 	for _, lang := range languages {
 		if lang.Match(fname) {
@@ -198,7 +210,7 @@ func handleFile(fname string) {
 	}
 	i, ok := info[l.Name()]
 	if !ok {
-		i = &Stats{}
+		i = &stats{}
 		info[l.Name()] = i
 	}
 	c, err := ioutil.ReadFile(fname)
@@ -217,6 +229,13 @@ func add(n string) {
 		goto invalid
 	}
 	if fi.IsDir() {
+		if len(ignoreDirs) > 0 {
+			for _, d := range ignoreDirs {
+				if fi.Name() == d {
+					return
+				}
+			}
+		}
 		fs, err := ioutil.ReadDir(n)
 		if err != nil {
 			goto invalid
@@ -239,31 +258,31 @@ invalid:
 	fmt.Fprintf(os.Stderr, "  ! %s\n", n)
 }
 
-type LData []LResult
+type ldata []lresult
 
-func (d LData) Len() int { return len(d) }
+func (d ldata) Len() int { return len(d) }
 
-func (d LData) Less(i, j int) bool {
+func (d ldata) Less(i, j int) bool {
 	if d[i].CodeLines == d[j].CodeLines {
 		return d[i].Name > d[j].Name
 	}
 	return d[i].CodeLines > d[j].CodeLines
 }
 
-func (d LData) Swap(i, j int) {
+func (d ldata) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
 
-type LResult struct {
-	Name string
-	FileCount int
-	CodeLines int
+type lresult struct {
+	Name         string
+	FileCount    int
+	CodeLines    int
 	CommentLines int
-	BlankLines int
-	TotalLines int
+	BlankLines   int
+	TotalLines   int
 }
 
-func (r *LResult) Add(a LResult) {
+func (r *lresult) Add(a lresult) {
 	r.FileCount += a.FileCount
 	r.CodeLines += a.CodeLines
 	r.CommentLines += a.CommentLines
@@ -273,18 +292,20 @@ func (r *LResult) Add(a LResult) {
 
 func printJSON() {
 	bs, err := json.MarshalIndent(info, "", "  ")
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(string(bs))
 }
 
 func printInfo() {
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
 	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\tTotal\t")
-	d := LData([]LResult{})
-	total := &LResult{}
+	d := ldata([]lresult{})
+	total := &lresult{}
 	total.Name = "Total"
 	for n, i := range info {
-		r := LResult{
+		r := lresult{
 			n,
 			i.FileCount,
 			i.CodeLines,
@@ -315,14 +336,16 @@ func printInfo() {
 
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-	useJson = flag.Bool("json", false, "JSON-format output")
-	version = flag.Bool("V", false, "display version info and exit")
+	useJSON    = flag.Bool("json", false, "JSON-format output")
+	v          = flag.Bool("V", false, "display version info and exit")
+	dirs       = flag.String("ignore", "", `ignore directory names i.e -ignore "dist,node_modules,vendor"`)
+	ignoreDirs []string
 )
 
 func main() {
 	flag.Parse()
-	if *version {
-		fmt.Printf("sloc %s\n", VERSION)
+	if *v {
+		fmt.Printf("sloc %s\n", version)
 		return
 	}
 	if *cpuprofile != "" {
@@ -340,6 +363,10 @@ func main() {
 		args = append(args, `.`)
 	}
 
+	if len(*dirs) > 0 {
+		ignoreDirs = strings.Split(*dirs, ",")
+	}
+
 	for _, n := range args {
 		add(n)
 	}
@@ -348,7 +375,7 @@ func main() {
 		handleFile(f)
 	}
 
-	if *useJson {
+	if *useJSON {
 		printJSON()
 	} else {
 		printInfo()
