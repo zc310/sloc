@@ -33,6 +33,7 @@ var languages = []language{
 
 	language{"Perl", mExt(".pl", ".pm"), shComments},
 	language{"PHP", mExt(".php"), cComments},
+	language{"Pascal", mExt(".pas", ".dpr",".inc"), pasComments},
 
 	language{"Shell", mExt(".sh"), shComments},
 	language{"Bash", mExt(".bash"), shComments},
@@ -78,6 +79,7 @@ var (
 	hsComments   = commenter{`--`, `{-`, `-}`, true}
 	sqlComments  = commenter{`--`, "\000", "\000", false}
 	pyComments   = commenter{`#`, `"""`, `"""`, false}
+	pasComments  = commenter{`//`, `{`, `}`, false}
 )
 
 type language struct {
