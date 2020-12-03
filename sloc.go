@@ -23,6 +23,7 @@ var languages = []language{
 	language{"Go", mExt(".go"), cComments},
 	language{"Scala", mExt(".scala"), cComments},
 	language{"Java", mExt(".java"), cComments},
+	language{"Dart", mExt(".dart"), noComments},
 
 	language{"YACC", mExt(".y"), cComments},
 	language{"Lex", mExt(".l"), cComments},
@@ -33,7 +34,7 @@ var languages = []language{
 
 	language{"Perl", mExt(".pl", ".pm"), shComments},
 	language{"PHP", mExt(".php"), cComments},
-	language{"Pascal", mExt(".pas", ".dpr",".inc"), pasComments},
+	language{"Pascal", mExt(".pas", ".dpr", ".inc"), pasComments},
 
 	language{"Shell", mExt(".sh"), shComments},
 	language{"Bash", mExt(".bash"), shComments},
