@@ -16,51 +16,40 @@ import (
 const version = `0.1.1`
 
 var languages = []language{
-	language{"Thrift", mExt(".thrift"), cComments},
-
-	language{"C", mExt(".c", ".h"), cComments},
-	language{"C++", mExt(".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx"), cComments},
-	language{"Go", mExt(".go"), cComments},
-	language{"Scala", mExt(".scala"), cComments},
-	language{"Java", mExt(".java"), cComments},
-	language{"Dart", mExt(".dart"), noComments},
-
-	language{"YACC", mExt(".y"), cComments},
-	language{"Lex", mExt(".l"), cComments},
-
-	language{"SQL", mExt(".sql"), sqlComments},
-
-	language{"Haskell", mExt(".hs", ".lhs"), hsComments},
-
-	language{"Perl", mExt(".pl", ".pm"), shComments},
-	language{"PHP", mExt(".php"), cComments},
-	language{"Pascal", mExt(".pas", ".dpr", ".inc"), pasComments},
-
-	language{"Shell", mExt(".sh"), shComments},
-	language{"Bash", mExt(".bash"), shComments},
-
-	language{"Ruby", mExt(".rb"), shComments},
-	language{"Python", mExt(".py"), pyComments},
-	language{"Assembly", mExt(".asm", ".s"), semiComments},
-	language{"Lisp", mExt(".lsp", ".lisp"), semiComments},
-	language{"Scheme", mExt(".scm", ".scheme"), semiComments},
-
-	language{"Make", mName("makefile", "Makefile", "MAKEFILE"), shComments},
-	language{"CMake", mName("CMakeLists.txt"), shComments},
-	language{"Jam", mName("Jamfile", "Jamrules"), shComments},
-
-	language{"Markdown", mExt(".md"), noComments},
-
-	language{"HAML", mExt(".haml"), noComments},
-	language{"SASS", mExt(".sass"), cssComments},
-	language{"SCSS", mExt(".scss"), cssComments},
-
-	language{"HTML", mExt(".htm", ".html", ".xhtml"), xmlComments},
-	language{"XML", mExt(".xml"), xmlComments},
-	language{"CSS", mExt(".css"), cssComments},
-	language{"JavaScript", mExt(".js"), cComments},
-	language{"TypeScript", mExt(".ts", ".tsx"), cComments},
-	language{"JSON", mExt(".json"), noComments},
+	{"Assembly", mExt(".asm", ".s"), semiComments},
+	{"Bash", mExt(".bash"), shComments},
+	{"C", mExt(".c", ".h"), cComments},
+	{"C++", mExt(".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx"), cComments},
+	{"CMake", mName("CMakeLists.txt"), shComments},
+	{"CSS", mExt(".css"), cssComments},
+	{"Dart", mExt(".dart"), noComments},
+	{"Go", mExt(".go"), cComments},
+	{"HAML", mExt(".haml"), noComments},
+	{"HTML", mExt(".htm", ".html", ".xhtml"), xmlComments},
+	{"Haskell", mExt(".hs", ".lhs"), hsComments},
+	{"JSON", mExt(".json"), noComments},
+	{"Jam", mName("Jamfile", "Jamrules"), shComments},
+	{"Java", mExt(".java"), cComments},
+	{"JavaScript", mExt(".js"), cComments},
+	{"Lex", mExt(".l"), cComments},
+	{"Lisp", mExt(".lsp", ".lisp"), semiComments},
+	{"Make", mName("makefile", "Makefile", "MAKEFILE"), shComments},
+	{"Markdown", mExt(".md"), noComments},
+	{"PHP", mExt(".php"), cComments},
+	{"Pascal", mExt(".pas", ".dpr", ".inc"), pasComments},
+	{"Perl", mExt(".pl", ".pm"), shComments},
+	{"Python", mExt(".py"), pyComments},
+	{"Ruby", mExt(".rb"), shComments},
+	{"SASS", mExt(".sass"), cssComments},
+	{"SCSS", mExt(".scss"), cssComments},
+	{"SQL", mExt(".sql"), sqlComments},
+	{"Scala", mExt(".scala"), cComments},
+	{"Scheme", mExt(".scm", ".scheme"), semiComments},
+	{"Shell", mExt(".sh"), shComments},
+	{"Thrift", mExt(".thrift"), cComments},
+	{"TypeScript", mExt(".ts", ".tsx"), cComments},
+	{"XML", mExt(".xml"), xmlComments},
+	{"YACC", mExt(".y"), cComments},
 }
 
 type commenter struct {
