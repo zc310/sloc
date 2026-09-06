@@ -20,10 +20,10 @@ number of lines in a project, and how much of that is code versus comment.
             Bash     13     483      151    122     756
             Make     33     174      106     87     367
 
-`sloc` cannot understand gitignore or hgignore, nor can it distinguish between
-"real" source and auto-generated files, so for best results, run it on a fresh
-repository with no compilation done.
+When recursively scanning a directory, `sloc` reads `.gitignore` files and
+excludes matching files and directories. It does not understand hgignore, nor
+can it distinguish between "real" source and auto-generated files, so for best
+results, run it on a fresh repository with no compilation done.
 
 You can generate JSON output with the `-json` flag, if that's easy to parse in
 the programming/scripting language of your choice.
-

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/pprof"
 	"sort"
 	"strings"
@@ -215,7 +216,162 @@ func handleFile(fname string) {
 
 var files []string
 
+type ignoreRule struct {
+	base          string
+	pattern       string
+	matchBase     bool
+	directoryOnly bool
+	negated       bool
+}
+
+func trimIgnoreLine(line string) string {
+	line = strings.TrimSuffix(line, "\r")
+	for len(line) > 0 && line[len(line)-1] == ' ' {
+		if escapedIgnoreCharacter(line, len(line)-1) {
+			break
+		}
+		line = line[:len(line)-1]
+	}
+	return line
+}
+
+func escapedIgnoreCharacter(s string, index int) bool {
+	backslashes := 0
+	for index > 0 && s[index-1] == '\\' {
+		backslashes++
+		index--
+	}
+	return backslashes%2 == 1
+}
+
+func parseIgnoreRule(base, line string) (ignoreRule, bool) {
+	line = trimIgnoreLine(line)
+	if line == "" || line[0] == '#' {
+		return ignoreRule{}, false
+	}
+
+	rule := ignoreRule{base: base}
+	if line[0] == '!' {
+		rule.negated = true
+		line = line[1:]
+	} else if len(line) > 1 && line[0] == '\\' && (line[1] == '#' || line[1] == '!') {
+		line = line[1:]
+	}
+	if line == "" {
+		return ignoreRule{}, false
+	}
+
+	rule.directoryOnly = line[len(line)-1] == '/' && !escapedIgnoreCharacter(line, len(line)-1)
+	if rule.directoryOnly {
+		line = line[:len(line)-1]
+	}
+	anchored := strings.HasPrefix(line, "/")
+	if anchored {
+		line = line[1:]
+	}
+	if line == "" {
+		return ignoreRule{}, false
+	}
+
+	rule.pattern = line
+	rule.matchBase = !anchored && !strings.Contains(line, "/")
+	return rule, true
+}
+
+func readIgnoreRules(dir string) []ignoreRule {
+	b, err := ioutil.ReadFile(filepath.Join(dir, ".gitignore"))
+	if err != nil {
+		return nil
+	}
+
+	base, err := filepath.Abs(dir)
+	if err != nil {
+		base = filepath.Clean(dir)
+	}
+	rules := make([]ignoreRule, 0)
+	for _, line := range strings.Split(string(b), "\n") {
+		if rule, ok := parseIgnoreRule(base, line); ok {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
+func matchIgnorePattern(pattern, name string) bool {
+	patterns := strings.Split(pattern, "/")
+	parts := strings.Split(name, "/")
+	return matchIgnoreParts(patterns, parts)
+}
+
+func matchIgnoreParts(patterns, parts []string) bool {
+	if len(patterns) == 0 {
+		return len(parts) == 0
+	}
+	if patterns[0] == "**" {
+		if matchIgnoreParts(patterns[1:], parts) {
+			return true
+		}
+		return len(parts) > 0 && matchIgnoreParts(patterns, parts[1:])
+	}
+	if len(parts) == 0 {
+		return false
+	}
+	matched, err := path.Match(patterns[0], parts[0])
+	if err != nil || !matched {
+		return false
+	}
+	return matchIgnoreParts(patterns[1:], parts[1:])
+}
+
+func (r ignoreRule) matches(name string, isDir bool) bool {
+	target, err := filepath.Abs(name)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(r.base, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return false
+	}
+	rel = filepath.ToSlash(rel)
+
+	match := func(candidate string) bool {
+		if r.matchBase {
+			candidate = path.Base(candidate)
+		}
+		return matchIgnorePattern(r.pattern, candidate)
+	}
+	if !r.directoryOnly {
+		return match(rel)
+	}
+
+	parts := strings.Split(rel, "/")
+	limit := len(parts)
+	if !isDir {
+		limit--
+	}
+	for i := 1; i <= limit; i++ {
+		if match(strings.Join(parts[:i], "/")) {
+			return true
+		}
+	}
+	return false
+}
+
+func isIgnored(name string, isDir bool, rules []ignoreRule) bool {
+	ignored := false
+	for _, rule := range rules {
+		if rule.matches(name, isDir) {
+			ignored = !rule.negated
+		}
+	}
+	return ignored
+}
+
 func add(n string) {
+	addWithRules(n, nil)
+}
+
+func addWithRules(n string, rules []ignoreRule) {
 	fi, err := os.Stat(n)
 	if err != nil {
 		goto invalid
@@ -228,13 +384,17 @@ func add(n string) {
 				}
 			}
 		}
+		rules = append(append([]ignoreRule{}, rules...), readIgnoreRules(n)...)
 		fs, err := ioutil.ReadDir(n)
 		if err != nil {
 			goto invalid
 		}
 		for _, f := range fs {
 			if f.Name()[0] != '.' {
-				add(path.Join(n, f.Name()))
+				name := filepath.Join(n, f.Name())
+				if !isIgnored(name, f.IsDir(), rules) {
+					addWithRules(name, rules)
+				}
 			}
 		}
 		return
