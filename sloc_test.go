@@ -64,3 +64,39 @@ func TestAddUsesGitignore(t *testing.T) {
 		}
 	}
 }
+
+func TestYAMLLanguage(t *testing.T) {
+	for _, name := range []string{"config.yaml", "config.yml", "path/to/config.yml"} {
+		var l language
+		ok := false
+		for _, lang := range languages {
+			if lang.Match(name) {
+				ok = true
+				l = lang
+				break
+			}
+		}
+		if !ok {
+			t.Fatalf("%s was not matched by any language", name)
+		}
+		if l.Name() != "YAML" {
+			t.Fatalf("%s matched language %s, want YAML", name, l.Name())
+		}
+	}
+
+	s := &stats{}
+	l := language{"YAML", mExt(".yaml", ".yml"), shComments}
+	l.Update([]byte("# comment\nkey: value\n\n  # indented\nother: 1\n"), s)
+	if s.TotalLines != 5 {
+		t.Fatalf("TotalLines = %d, want 5", s.TotalLines)
+	}
+	if s.CodeLines != 2 {
+		t.Fatalf("CodeLines = %d, want 2", s.CodeLines)
+	}
+	if s.CommentLines != 2 {
+		t.Fatalf("CommentLines = %d, want 2", s.CommentLines)
+	}
+	if s.BlankLines != 1 {
+		t.Fatalf("BlankLines = %d, want 1", s.BlankLines)
+	}
+}

@@ -51,6 +51,7 @@ var languages = []language{
 	{"TypeScript", mExt(".ts", ".tsx"), cComments},
 	{"XML", mExt(".xml"), xmlComments},
 	{"YACC", mExt(".y"), cComments},
+	{"YAML", mExt(".yaml", ".yml"), shComments},
 }
 
 type commenter struct {
